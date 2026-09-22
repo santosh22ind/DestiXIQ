@@ -27,9 +27,9 @@ const SECTION_LABELS: Record<string, string> = {
 };
 
 const RISK_COLORS: Record<string, string> = {
-  Low: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
-  Medium: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
-  High: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
+  Low: "bg-green-100 text-green-800",
+  Medium: "bg-yellow-100 text-yellow-800",
+  High: "bg-red-100 text-red-800",
 };
 
 function defaultDateRange() {
@@ -77,14 +77,14 @@ export function BriefingForm({ destinations }: { destinations: Destination[] }) 
           e.preventDefault();
           generate(false);
         }}
-        className="flex flex-col gap-3"
+        className="flex flex-col gap-6"
       >
-        <label className="flex flex-col gap-1 text-sm">
+        <label className="flex flex-col gap-1 text-sm text-ink/60">
           Destination
           <select
             value={destinationId}
             onChange={(e) => setDestinationId(e.target.value)}
-            className="rounded border px-3 py-2 dark:bg-zinc-900"
+            className="border-b border-ink/30 bg-transparent px-1 py-2 text-ink focus:border-ink focus:outline-none"
           >
             {destinations.map((d) => (
               <option key={d.id} value={d.id}>
@@ -94,23 +94,23 @@ export function BriefingForm({ destinations }: { destinations: Destination[] }) 
           </select>
         </label>
 
-        <div className="flex gap-3">
-          <label className="flex flex-1 flex-col gap-1 text-sm">
+        <div className="flex gap-6">
+          <label className="flex flex-1 flex-col gap-1 text-sm text-ink/60">
             From
             <input
               type="date"
               value={dateRangeStart}
               onChange={(e) => setDateRangeStart(e.target.value)}
-              className="rounded border px-3 py-2 dark:bg-zinc-900"
+              className="border-b border-ink/30 bg-transparent px-1 py-2 text-ink focus:border-ink focus:outline-none"
             />
           </label>
-          <label className="flex flex-1 flex-col gap-1 text-sm">
+          <label className="flex flex-1 flex-col gap-1 text-sm text-ink/60">
             To
             <input
               type="date"
               value={dateRangeEnd}
               onChange={(e) => setDateRangeEnd(e.target.value)}
-              className="rounded border px-3 py-2 dark:bg-zinc-900"
+              className="border-b border-ink/30 bg-transparent px-1 py-2 text-ink focus:border-ink focus:outline-none"
             />
           </label>
         </div>
@@ -118,26 +118,27 @@ export function BriefingForm({ destinations }: { destinations: Destination[] }) 
         <button
           type="submit"
           disabled={loading || !destinationId}
-          className="rounded bg-black px-3 py-2 text-white disabled:opacity-50 dark:bg-white dark:text-black"
+          className="inline-flex w-fit items-center gap-2 rounded-full bg-ink px-6 py-3 font-medium text-cream hover:bg-ink/90 disabled:opacity-50"
         >
           {loading ? "Generating…" : "Generate briefing"}
+          {!loading && <span aria-hidden>→</span>}
         </button>
       </form>
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-red-700">{error}</p>}
 
       {result && (
-        <div className="flex flex-col gap-4 rounded border p-4">
+        <div className="flex flex-col gap-4 rounded-2xl border border-ink/20 p-6">
           <div className="flex items-center justify-between">
             <span
-              className={`rounded px-2 py-1 text-xs font-medium ${RISK_COLORS[result.riskLabel]}`}
+              className={`rounded-full px-3 py-1 text-xs font-medium ${RISK_COLORS[result.riskLabel]}`}
             >
               Risk: {result.riskLabel}
             </span>
             <button
               onClick={() => generate(true)}
               disabled={loading}
-              className="text-xs underline disabled:opacity-50"
+              className="text-xs underline decoration-ink/30 underline-offset-4 hover:decoration-ink disabled:opacity-50"
             >
               Regenerate
             </button>
@@ -150,12 +151,12 @@ export function BriefingForm({ destinations }: { destinations: Destination[] }) 
             .map(([category, text]) => (
               <div key={category} className="flex flex-col gap-1">
                 <h3 className="text-sm font-semibold">{SECTION_LABELS[category] ?? category}</h3>
-                <p className="text-sm text-zinc-600 dark:text-zinc-400">{text}</p>
+                <p className="text-sm text-ink/60">{text}</p>
               </div>
             ))}
 
           {result.content.unavailableSections.length > 0 && (
-            <p className="text-xs text-zinc-400">
+            <p className="text-xs text-ink/40">
               No data available for:{" "}
               {result.content.unavailableSections
                 .map((c) => SECTION_LABELS[c] ?? c)

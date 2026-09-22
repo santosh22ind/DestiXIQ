@@ -41,5 +41,8 @@ export async function signUpAction(formData: FormData) {
     redirect(`/signup?error=${encodeURIComponent(error.message)}`);
   }
 
-  redirect(`/verify?email=${encodeURIComponent(parsed.data.email)}`);
+  // OTP verification is disabled for now (email confirmations off in Supabase) —
+  // signUp already returns an active session, so go straight in. Re-enable the
+  // /verify redirect here when OTP comes back in a later phase.
+  redirect("/");
 }

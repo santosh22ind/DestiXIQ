@@ -10,39 +10,43 @@ export default async function SignUpPage({
   const { error } = await searchParams;
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-6 p-8">
-      <h1 className="text-2xl font-semibold">Sign up</h1>
-      {error && <p className="max-w-sm text-center text-sm text-red-600">{error}</p>}
-      <form action={signUpAction} className="flex w-full max-w-sm flex-col gap-3">
-        <input
-          name="email"
-          type="email"
-          placeholder="Email"
-          required
-          className="rounded border px-3 py-2 dark:bg-zinc-900"
-        />
-        <input
-          name="password"
-          type="password"
-          placeholder="Password (min 8 characters)"
-          required
-          minLength={8}
-          className="rounded border px-3 py-2 dark:bg-zinc-900"
-        />
-        <TurnstileWidget />
-        <button
-          type="submit"
-          className="rounded bg-black px-3 py-2 text-white dark:bg-white dark:text-black"
-        >
-          Sign up
-        </button>
-      </form>
-      <p className="text-sm">
-        Already have an account?{" "}
-        <Link href="/login" className="underline">
-          Log in
-        </Link>
-      </p>
+    <div className="flex flex-1 flex-col items-center justify-center px-6 py-16 sm:px-10">
+      <div className="w-full max-w-md">
+        <p className="text-sm font-medium text-ink/60">/ Get Started</p>
+        <h1 className="mt-2 text-4xl font-bold tracking-tight">Create your account</h1>
+        {error && <p className="mt-4 text-sm text-red-700">{error}</p>}
+        <form action={signUpAction} className="mt-8 flex flex-col gap-6">
+          <input
+            name="email"
+            type="email"
+            placeholder="Your email"
+            required
+            className="border-b border-ink/30 bg-transparent px-1 py-2 text-ink placeholder:text-ink/40 focus:border-ink focus:outline-none"
+          />
+          <input
+            name="password"
+            type="password"
+            placeholder="Password (min 8 characters)"
+            required
+            minLength={8}
+            className="border-b border-ink/30 bg-transparent px-1 py-2 text-ink placeholder:text-ink/40 focus:border-ink focus:outline-none"
+          />
+          <TurnstileWidget />
+          <button
+            type="submit"
+            className="inline-flex w-fit items-center gap-2 rounded-full bg-ink px-6 py-3 font-medium text-cream hover:bg-ink/90"
+          >
+            Sign up
+            <span aria-hidden>→</span>
+          </button>
+        </form>
+        <p className="mt-6 text-sm text-ink/60">
+          Already have an account?{" "}
+          <Link href="/login" className="underline decoration-ink/30 underline-offset-4 hover:decoration-ink">
+            Log in
+          </Link>
+        </p>
+      </div>
     </div>
   );
 }
