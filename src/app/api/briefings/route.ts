@@ -3,6 +3,7 @@ import { z } from "zod";
 import { createAuthClient } from "@/lib/supabase/server-client";
 import { createServiceClient } from "@/lib/supabase/server";
 import { runBriefingGraph } from "@/lib/agents/graph";
+import { checkAndIncrementRateLimit } from "@/lib/agents/rate-limit";
 
 const requestSchema = z.object({
   destinationId: z.string().uuid(),
@@ -27,6 +28,17 @@ export async function POST(request: Request) {
   }
   const { destinationId, dateRangeStart, dateRangeEnd, forceRegenerate } = parsed.data;
 
+  const rateLimit = await checkAndIncrementRateLimit(user.id);
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      {
+        error: "rate_limit_exceeded",
+        message: `You've reached today's limit of ${rateLimit.limit} briefing generations. Try again tomorrow.`,
+      },
+      { status: 429 },
+    );
+  }
+
   const supabase = createServiceClient();
 
   const { data: destination, error: destinationError } = await supabase
@@ -39,8 +51,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "destination_not_found" }, { status: 404 });
   }
 
-  // Cache lookup (skip if forceRegenerate) and rate limiting are not wired
-  // up yet — see docs/mvp.md §10 step 6. Every call runs the full pipeline.
+  // Cache lookup (skip if forceRegenerate) is not wired up yet — every
+  // call runs the full pipeline. Rate limiting above bounds the damage.
   const { data: agentRun, error: agentRunError } = await supabase
     .from("agent_runs")
     .insert({
