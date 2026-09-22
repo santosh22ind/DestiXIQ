@@ -3,9 +3,11 @@ import { isAIMessage } from "@langchain/core/messages";
 import { z } from "zod";
 import type { BriefingContent, CollectorResult, RiskLabel } from "./state";
 
-// gemini-3.8-flash is the current GA Flash model as of Sept 2026; override
-// via env if Google deprecates/renames it again before this gets revisited.
-const MODEL_NAME = process.env.GEMINI_MODEL ?? "gemini-3.8-flash";
+// gemini-3.5-flash-lite over gemini-3.8-flash: free tier is 500 req/day
+// vs. 20 req/day (Sept 2026 quotas) — matters while this is still being
+// tested frequently. Revisit if output quality becomes the bottleneck
+// instead of quota. Override via env without a code change either way.
+const MODEL_NAME = process.env.GEMINI_MODEL ?? "gemini-3.5-flash-lite";
 
 const briefingSchema = z.object({
   summary: z.string().describe("2-3 sentence overview of the destination's current conditions"),
