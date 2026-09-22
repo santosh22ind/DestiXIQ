@@ -1,6 +1,12 @@
 import { Annotation, StateGraph, START, END } from "@langchain/langgraph";
 import { createServiceClient } from "@/lib/supabase/server";
 import { runWeatherAgent } from "./weather";
+import { runNewsAgent } from "./news";
+import { runHealthAgent } from "./health";
+import { runCivilUnrestAgent } from "./civil_unrest";
+import { runTransportAgent } from "./transport";
+import { runEventsAgent } from "./events";
+import { runAdvisoriesAgent } from "./advisories";
 import { computeRiskLabel } from "./risk";
 import { runSynthesizer, type LlmUsage } from "./synthesizer";
 import { logAgentStep } from "./logging";
@@ -10,6 +16,7 @@ const BriefingGraphState = Annotation.Root({
   agentRunId: Annotation<string>,
   destinationId: Annotation<string>,
   destinationName: Annotation<string>,
+  countryCode: Annotation<string>,
   lat: Annotation<number | null>,
   lng: Annotation<number | null>,
   rawSignals: Annotation<CollectorResult[]>({
@@ -21,18 +28,75 @@ const BriefingGraphState = Annotation.Root({
   llmUsage: Annotation<LlmUsage | undefined>,
 });
 
-const graph = new StateGraph(BriefingGraphState)
-  .addNode("weather", async (state) => {
+type CollectorNodeName =
+  | "weather"
+  | "news"
+  | "health"
+  | "civil_unrest"
+  | "transport"
+  | "events"
+  | "advisories";
+
+function collectorNode(
+  nodeName: CollectorNodeName,
+  run: (state: typeof BriefingGraphState.State) => Promise<CollectorResult>,
+) {
+  return async (state: typeof BriefingGraphState.State) => {
     const supabase = createServiceClient();
     const startedAt = new Date();
-    const result = await runWeatherAgent({
-      id: state.destinationId,
-      lat: state.lat,
-      lng: state.lng,
-    });
-    await logAgentStep(supabase, state.agentRunId, "weather_agent", result.status, startedAt, new Date());
+    const result = await run(state);
+    await logAgentStep(supabase, state.agentRunId, `${nodeName}_agent`, result.status, startedAt, new Date());
     return { rawSignals: [result] };
-  })
+  };
+}
+
+const graph = new StateGraph(BriefingGraphState)
+  .addNode(
+    "weather",
+    collectorNode("weather", (state) =>
+      runWeatherAgent({ id: state.destinationId, lat: state.lat, lng: state.lng }),
+    ),
+  )
+  .addNode(
+    "news",
+    collectorNode("news", (state) =>
+      runNewsAgent({ id: state.destinationId, countryCode: state.countryCode }),
+    ),
+  )
+  .addNode(
+    "health",
+    collectorNode("health", (state) =>
+      runHealthAgent({ id: state.destinationId, countryCode: state.countryCode }),
+    ),
+  )
+  .addNode(
+    "civil_unrest",
+    collectorNode("civil_unrest", (state) =>
+      runCivilUnrestAgent({ id: state.destinationId, countryCode: state.countryCode }),
+    ),
+  )
+  .addNode(
+    "transport",
+    collectorNode("transport", (state) =>
+      runTransportAgent({
+        id: state.destinationId,
+        name: state.destinationName,
+        countryCode: state.countryCode,
+      }),
+    ),
+  )
+  .addNode(
+    "events",
+    collectorNode("events", (state) =>
+      runEventsAgent({ id: state.destinationId, name: state.destinationName }),
+    ),
+  )
+  .addNode(
+    "advisories",
+    collectorNode("advisories", (state) =>
+      runAdvisoriesAgent({ id: state.destinationId, countryCode: state.countryCode }),
+    ),
+  )
   .addNode("risk", async (state) => {
     const supabase = createServiceClient();
     const startedAt = new Date();
@@ -66,7 +130,19 @@ const graph = new StateGraph(BriefingGraphState)
     return { draftBriefing: content, llmUsage: usage };
   })
   .addEdge(START, "weather")
+  .addEdge(START, "news")
+  .addEdge(START, "health")
+  .addEdge(START, "civil_unrest")
+  .addEdge(START, "transport")
+  .addEdge(START, "events")
+  .addEdge(START, "advisories")
   .addEdge("weather", "risk")
+  .addEdge("news", "risk")
+  .addEdge("health", "risk")
+  .addEdge("civil_unrest", "risk")
+  .addEdge("transport", "risk")
+  .addEdge("events", "risk")
+  .addEdge("advisories", "risk")
   .addEdge("risk", "synthesizer")
   .addEdge("synthesizer", END)
   .compile();
@@ -75,6 +151,7 @@ export async function runBriefingGraph(input: {
   agentRunId: string;
   destinationId: string;
   destinationName: string;
+  countryCode: string;
   lat: number | null;
   lng: number | null;
 }) {

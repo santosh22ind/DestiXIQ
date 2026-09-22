@@ -31,7 +31,7 @@ export async function POST(request: Request) {
 
   const { data: destination, error: destinationError } = await supabase
     .from("destinations")
-    .select("id, name, lat, lng")
+    .select("id, name, lat, lng, country_code")
     .eq("id", destinationId)
     .single();
 
@@ -61,6 +61,7 @@ export async function POST(request: Request) {
       agentRunId: agentRun.id,
       destinationId: destination.id,
       destinationName: destination.name,
+      countryCode: destination.country_code,
       lat: destination.lat,
       lng: destination.lng,
     });
