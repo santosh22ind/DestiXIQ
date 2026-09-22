@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { TurnstileWidget } from "@/components/TurnstileWidget";
 import { signInAction } from "./actions";
 
 export default async function LoginPage({
@@ -27,6 +28,7 @@ export default async function LoginPage({
           required
           className="rounded border px-3 py-2 dark:bg-zinc-900"
         />
+        <TurnstileWidget />
         <button
           type="submit"
           className="rounded bg-black px-3 py-2 text-white dark:bg-white dark:text-black"

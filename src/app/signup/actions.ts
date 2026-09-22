@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createAuthClient } from "@/lib/supabase/server-client";
+import { verifyTurnstileToken } from "@/lib/turnstile";
 
 const signUpSchema = z.object({
   email: z.string().email(),
@@ -10,6 +11,13 @@ const signUpSchema = z.object({
 });
 
 export async function signUpAction(formData: FormData) {
+  const turnstileOk = await verifyTurnstileToken(
+    formData.get("cf-turnstile-response") as string | null,
+  );
+  if (!turnstileOk) {
+    redirect(`/signup?error=${encodeURIComponent("Bot check failed. Please try again.")}`);
+  }
+
   const parsed = signUpSchema.safeParse({
     email: formData.get("email"),
     password: formData.get("password"),
