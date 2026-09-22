@@ -25,6 +25,9 @@ export default async function Home() {
           <p className="text-sm text-zinc-600 dark:text-zinc-400">
             Signed in as {user.email}
           </p>
+          <Link href="/briefing" className="text-sm underline">
+            Request a briefing
+          </Link>
           <form action={signOutAction}>
             <button type="submit" className="text-sm underline">
               Sign out
