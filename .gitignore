@@ -4,6 +4,9 @@
 # claude code local settings
 .claude/settings.local.json
 
+# local credentials, never commit
+.supabase-access-token.txt
+
 # dependencies
 /node_modules
 /.pnp
