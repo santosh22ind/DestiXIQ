@@ -47,6 +47,50 @@ async function fetchUsStateDept(countryName: string): Promise<NormalizedSignal[]
   ];
 }
 
+// Smartraveller's country titles mostly match COUNTRY_INFO.name, except
+// where noted here (e.g. it uses the long form for the US). It has no
+// entry for Australia itself, since it's advice for outbound Australian
+// travelers — that's expected, not a bug, and just yields no items.
+const SMARTRAVELLER_NAME_OVERRIDES: Record<string, string> = {
+  US: "United States of America",
+};
+
+function severityFromSmartravellerLevel(level: string): NormalizedSignal["severity"] {
+  if (level.includes("Do not travel")) return "critical";
+  if (level.includes("Reconsider your need to travel")) return "warning";
+  if (level.includes("high degree of caution")) return "advisory";
+  return "info";
+}
+
+async function fetchSmartraveller(countryCode: string, countryName: string): Promise<NormalizedSignal[]> {
+  const res = await fetchWithTimeout("https://www.smartraveller.gov.au/destinations-export");
+  if (!res.ok) throw new Error(`Smartraveller responded ${res.status}`);
+  const data = (await res.json()) as Array<{
+    title: string;
+    field_overall_advice_level: string;
+    field_last_update_notes: string;
+    field_url: string;
+    changed: string;
+  }>;
+
+  const title = SMARTRAVELLER_NAME_OVERRIDES[countryCode] ?? countryName;
+  const match = data.find((d) => d.title === title);
+  if (!match) return [];
+
+  const timestamp = new Date(match.changed);
+
+  return [
+    {
+      title: `Smartraveller (AU): ${match.field_overall_advice_level}`,
+      description: match.field_last_update_notes.slice(0, 400),
+      severity: severityFromSmartravellerLevel(match.field_overall_advice_level),
+      timestamp: Number.isNaN(timestamp.getTime()) ? new Date().toISOString() : timestamp.toISOString(),
+      url: match.field_url,
+      sourceName: "Smartraveller",
+    },
+  ];
+}
+
 async function fetchUkFcdo(slug: string): Promise<NormalizedSignal[]> {
   const res = await fetchWithTimeout(`https://www.gov.uk/api/content/foreign-travel-advice/${slug}`, {
     headers: { Accept: "application/json" },
@@ -75,7 +119,7 @@ export async function runAdvisoriesAgent(destination: {
 }): Promise<CollectorResult> {
   const countryInfo = COUNTRY_INFO[destination.countryCode];
   if (!countryInfo) {
-    return { category: "advisories", sourceName: "US State Dept + UK FCDO", status: "skipped", items: [] };
+    return { category: "advisories", sourceName: "US State Dept + UK FCDO + Smartraveller", status: "skipped", items: [] };
   }
 
   const supabase = createServiceClient();
@@ -88,6 +132,12 @@ export async function runAdvisoriesAgent(destination: {
   const ukSourceId = countryInfo.ukFcdoSlug
     ? await getOrCreateSourceId(supabase, "advisories", "UK FCDO", "https://www.gov.uk")
     : null;
+  const auSourceId = await getOrCreateSourceId(
+    supabase,
+    "advisories",
+    "Smartraveller",
+    "https://www.smartraveller.gov.au",
+  );
 
   const tasks: Promise<NormalizedSignal[]>[] = [
     (async () => {
@@ -124,6 +174,22 @@ export async function runAdvisoriesAgent(destination: {
     );
   }
 
+  tasks.push(
+    (async () => {
+      const cached = await readRawSignalCache(supabase, destination.id, auSourceId);
+      if (cached) return cached.items;
+      const items = await fetchSmartraveller(destination.countryCode, countryInfo.name);
+      await writeRawSignalCache(
+        supabase,
+        destination.id,
+        auSourceId,
+        { category: "advisories", sourceName: "Smartraveller", status: "ok", items },
+        CACHE_TTL_SECONDS,
+      );
+      return items;
+    })(),
+  );
+
   const results = await Promise.allSettled(tasks);
   const items: NormalizedSignal[] = [];
   let anySucceeded = false;
@@ -135,8 +201,8 @@ export async function runAdvisoriesAgent(destination: {
   }
 
   if (!anySucceeded) {
-    return { category: "advisories", sourceName: "US State Dept + UK FCDO", status: "error", items: [] };
+    return { category: "advisories", sourceName: "US State Dept + UK FCDO + Smartraveller", status: "error", items: [] };
   }
 
-  return { category: "advisories", sourceName: "US State Dept + UK FCDO", status: "ok", items };
+  return { category: "advisories", sourceName: "US State Dept + UK FCDO + Smartraveller", status: "ok", items };
 }

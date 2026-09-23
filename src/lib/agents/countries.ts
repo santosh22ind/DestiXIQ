@@ -6,7 +6,7 @@ export const COUNTRY_INFO: Record<
   string,
   { name: string; fips: string; ukFcdoSlug?: string }
 > = {
-  US: { name: "United States", fips: "US" },
+  US: { name: "United States", fips: "US", ukFcdoSlug: "usa" },
   CA: { name: "Canada", fips: "CA", ukFcdoSlug: "canada" },
   IN: { name: "India", fips: "IN", ukFcdoSlug: "india" },
   GB: { name: "United Kingdom", fips: "UK" },
