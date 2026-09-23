@@ -16,6 +16,7 @@ fill in as we agree on ordering (e.g. P0/P1/P2, or a number).
 - Global transport/congestion collector (AirLabs Flight Delays), replacing the
   US-only FAA source — verified against real US + non-US destinations
 - News and Events collectors verified working end-to-end with real API keys (local)
+- NWS severe weather alerts added to the weather collector (US destinations, free/no key)
 
 ## Open
 
