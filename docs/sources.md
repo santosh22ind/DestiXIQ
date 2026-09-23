@@ -144,7 +144,17 @@ cross-check.
 
 ## 5. Transport Disruptions & Airport Congestion
 
-- **FAA NAS Status** — `nasstatus.faa.gov`
+- **AirLabs Flight Delays** — `airlabs.co/docs/delays` — **implemented (MVP)**
+  Global coverage, per-airport currently-delayed-flights list (delayed
+  count + delay minutes per flight). Free tier ~1,000 requests/month.
+  Signup went through a waitlist (no fixed ETA) before a key was issued.
+  Caveat: no total-scheduled-flights denominator, so absolute delay
+  counts/durations had to be calibrated against live data rather than
+  treated as a clean "% of flights delayed" signal — see severity
+  thresholds in `src/lib/agents/transport.ts`. Superseded the FAA-only
+  approach below, since it covers every curated destination, not just US.
+
+- **FAA NAS Status** — `nasstatus.faa.gov` — superseded by AirLabs above
   USA airports only. Free, public domain, no key; XML/JSON feed of ground
   stops, ground delay programs, closures, arrival/departure delays.
   Trust: official FAA operational data.
@@ -340,7 +350,7 @@ than just linked/summarized.
 | News | NewsData.io (free tier) | Only major aggregator whose free tier explicitly allows production use |
 | Health alerts | WHO Disease Outbreak News + CDC Travel Notices | Both free, official, no key |
 | Civil unrest | GDELT | Free, unlimited, global, real-time-ish; add ACLED later once registered |
-| Transport/airport | FAA NAS Status (US) + AviationStack (global, low volume) | Free/cheap starting point; accept India/South America gaps for now |
+| Transport/airport | AirLabs Flight Delays (global, ~1,000 req/mo free) | Implemented — replaces the earlier FAA-only plan, covers all curated destinations |
 | Local events | Ticketmaster Discovery API | Free key, decent multi-region coverage except South America/India (PredictHQ as later addition) |
 | Government travel advisories | US State Dept + UK FCDO | Both genuinely free, public, structured (JSON), no key needed |
 
