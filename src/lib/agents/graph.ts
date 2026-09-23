@@ -54,7 +54,12 @@ const graph = new StateGraph(BriefingGraphState)
   .addNode(
     "weather",
     collectorNode("weather", (state) =>
-      runWeatherAgent({ id: state.destinationId, lat: state.lat, lng: state.lng }),
+      runWeatherAgent({
+        id: state.destinationId,
+        lat: state.lat,
+        lng: state.lng,
+        countryCode: state.countryCode,
+      }),
     ),
   )
   .addNode(
