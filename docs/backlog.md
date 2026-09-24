@@ -19,6 +19,8 @@ fill in as we agree on ordering (e.g. P0/P1/P2, or a number).
 - NWS severe weather alerts added to the weather collector (US destinations, free/no key)
 - Smartraveller (Australia) advisories added; fixed a pre-existing gap where US
   destinations got zero advisories from either existing source
+- Canada government travel advisories added — every destination now gets 3-4
+  cross-referenced government advisories instead of up to 2
 
 ## Open
 
