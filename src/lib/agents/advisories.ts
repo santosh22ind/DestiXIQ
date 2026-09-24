@@ -91,6 +91,45 @@ async function fetchSmartraveller(countryCode: string, countryName: string): Pro
   ];
 }
 
+// Canada's advisory-state is a 0-indexed 4-level scale: 0=normal
+// precautions, 1=high degree of caution, 2=avoid non-essential travel,
+// 3=avoid all travel. Keyed directly by ISO country code (unlike
+// Smartraveller/US State Dept, no name-matching needed) — and like those
+// two, has no self-referential entry for Canada itself.
+function severityFromCanadaState(state: number): NormalizedSignal["severity"] {
+  if (state >= 3) return "critical";
+  if (state === 2) return "warning";
+  if (state === 1) return "advisory";
+  return "info";
+}
+
+async function fetchCanada(countryCode: string): Promise<NormalizedSignal[]> {
+  const res = await fetchWithTimeout("https://data.international.gc.ca/travel-voyage/index-alpha-eng.json");
+  if (!res.ok) throw new Error(`Canada Travel Advice responded ${res.status}`);
+  const data = await res.json();
+  const entry = data.data?.[countryCode] as
+    | {
+        "advisory-state": number;
+        "date-published": { date: string };
+        eng: { name: string; "url-slug": string; "advisory-text": string };
+      }
+    | undefined;
+  if (!entry) return [];
+
+  const timestamp = new Date(entry["date-published"].date);
+
+  return [
+    {
+      title: `Canada travel advice: ${entry.eng["advisory-text"]}`,
+      description: `Government of Canada advisory for ${entry.eng.name}: ${entry.eng["advisory-text"]}.`,
+      severity: severityFromCanadaState(entry["advisory-state"]),
+      timestamp: Number.isNaN(timestamp.getTime()) ? new Date().toISOString() : timestamp.toISOString(),
+      url: `https://travel.gc.ca/destinations/${entry.eng["url-slug"]}`,
+      sourceName: "Canada Travel Advice",
+    },
+  ];
+}
+
 async function fetchUkFcdo(slug: string): Promise<NormalizedSignal[]> {
   const res = await fetchWithTimeout(`https://www.gov.uk/api/content/foreign-travel-advice/${slug}`, {
     headers: { Accept: "application/json" },
@@ -119,7 +158,7 @@ export async function runAdvisoriesAgent(destination: {
 }): Promise<CollectorResult> {
   const countryInfo = COUNTRY_INFO[destination.countryCode];
   if (!countryInfo) {
-    return { category: "advisories", sourceName: "US State Dept + UK FCDO + Smartraveller", status: "skipped", items: [] };
+    return { category: "advisories", sourceName: "US State Dept + UK FCDO + Smartraveller + Canada", status: "skipped", items: [] };
   }
 
   const supabase = createServiceClient();
@@ -137,6 +176,12 @@ export async function runAdvisoriesAgent(destination: {
     "advisories",
     "Smartraveller",
     "https://www.smartraveller.gov.au",
+  );
+  const caSourceId = await getOrCreateSourceId(
+    supabase,
+    "advisories",
+    "Canada Travel Advice",
+    "https://travel.gc.ca",
   );
 
   const tasks: Promise<NormalizedSignal[]>[] = [
@@ -190,6 +235,22 @@ export async function runAdvisoriesAgent(destination: {
     })(),
   );
 
+  tasks.push(
+    (async () => {
+      const cached = await readRawSignalCache(supabase, destination.id, caSourceId);
+      if (cached) return cached.items;
+      const items = await fetchCanada(destination.countryCode);
+      await writeRawSignalCache(
+        supabase,
+        destination.id,
+        caSourceId,
+        { category: "advisories", sourceName: "Canada Travel Advice", status: "ok", items },
+        CACHE_TTL_SECONDS,
+      );
+      return items;
+    })(),
+  );
+
   const results = await Promise.allSettled(tasks);
   const items: NormalizedSignal[] = [];
   let anySucceeded = false;
@@ -201,8 +262,8 @@ export async function runAdvisoriesAgent(destination: {
   }
 
   if (!anySucceeded) {
-    return { category: "advisories", sourceName: "US State Dept + UK FCDO + Smartraveller", status: "error", items: [] };
+    return { category: "advisories", sourceName: "US State Dept + UK FCDO + Smartraveller + Canada", status: "error", items: [] };
   }
 
-  return { category: "advisories", sourceName: "US State Dept + UK FCDO + Smartraveller", status: "ok", items };
+  return { category: "advisories", sourceName: "US State Dept + UK FCDO + Smartraveller + Canada", status: "ok", items };
 }
