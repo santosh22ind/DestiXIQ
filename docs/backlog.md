@@ -21,13 +21,15 @@ fill in as we agree on ordering (e.g. P0/P1/P2, or a number).
   destinations got zero advisories from either existing source
 - Canada government travel advisories added — every destination now gets 3-4
   cross-referenced government advisories instead of up to 2
+- Response caching on `/api/briefings` — cache hits (same destination + exact
+  date range, within the 30-min TTL) skip the pipeline entirely and don't
+  count against the daily rate limit; UI shows a "Cached" badge
 
 ## Open
 
 | Priority | Item | Why it matters |
 |---|---|---|
 | | Re-enable OTP email verification | Disabled for now. Now that there's a real Vercel URL, the app-level "Send Email Hook" approach (Gmail App Password stays only in your own env vars, never given to Supabase) is viable — was blocked earlier only by the lack of a public URL for the hook. |
-| | Response caching on `/api/briefings` | Every "Generate" click reruns the full 7-agent + Gemini pipeline, even for an identical destination/date range already generated recently. Rate limiting bounds the damage but doesn't eliminate wasted quota. `briefings.expires_at` already exists in the schema for this. |
 | | Add `NEWSDATA_API_KEY` / `TICKETMASTER_API_KEY` / `AIRLABS_API_KEY` to Vercel | All three verified working in local dev. Still need adding to Vercel's env vars + redeploy to take effect in production. |
 | | Ticketmaster has ~no France coverage (known limitation) | Confirmed directly against the API: `countryCode=FR` returns 0 total events vs. 10,000+ for GB/US. Paris (and likely other non-US/UK destinations) will consistently show "no data" for Events — not a code bug. Would need a broader events source (Eventbrite, PredictHQ, etc.) to fix. |
 | | LLM / API monthly budget ceiling | No hard spending stop if usage spikes unexpectedly (e.g. rate limit misconfigured, or bug causing retries). |
