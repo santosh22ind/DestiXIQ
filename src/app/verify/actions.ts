@@ -1,8 +1,14 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import { z } from "zod";
 import { createAuthClient } from "@/lib/supabase/server-client";
+import {
+  createSessionCookieValue,
+  SESSION_COOKIE_NAME,
+  SESSION_MAX_AGE_SECONDS,
+} from "@/lib/session-cookie";
 
 const verifySchema = z.object({
   email: z.string().email(),
@@ -25,19 +31,28 @@ export async function verifyOtpAction(formData: FormData) {
   }
 
   const supabase = await createAuthClient();
-  const { error } = await supabase.auth.verifyOtp({
+  const { data, error } = await supabase.auth.verifyOtp({
     email: parsed.data.email,
     token: parsed.data.token,
-    type: "signup",
+    type: "email",
   });
 
-  if (error) {
+  if (error || !data.user) {
     redirect(
       `/verify?email=${encodeURIComponent(parsed.data.email)}&error=${encodeURIComponent(
-        error.message,
+        error?.message ?? "Verification failed.",
       )}`,
     );
   }
 
-  redirect("/");
+  const cookieStore = await cookies();
+  cookieStore.set(SESSION_COOKIE_NAME, await createSessionCookieValue(data.user.id), {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: SESSION_MAX_AGE_SECONDS,
+  });
+
+  redirect("/briefing");
 }

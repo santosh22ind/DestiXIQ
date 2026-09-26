@@ -9,7 +9,7 @@ export default async function BriefingPage() {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/login");
+    redirect("/auth");
   }
 
   const { data: destinations } = await supabase

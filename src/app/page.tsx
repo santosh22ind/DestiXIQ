@@ -19,10 +19,10 @@ export default async function Home() {
         briefing.
       </p>
       <Link
-        href={user ? "/briefing" : "/signup"}
+        href={user ? "/briefing" : "/auth"}
         className="mt-2 inline-flex items-center gap-2 rounded-full bg-ink px-6 py-3 font-medium text-cream hover:bg-ink/90"
       >
-        {user ? "Request a briefing" : "Get Started"}
+        {user ? "Request a briefing" : "Sign in"}
         <span aria-hidden>→</span>
       </Link>
     </div>

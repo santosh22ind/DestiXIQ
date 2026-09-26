@@ -28,16 +28,10 @@ export function TopNav({ userEmail }: { userEmail?: string | null }) {
       ) : (
         <div className="flex items-center gap-4 text-sm">
           <Link
-            href="/login"
-            className="underline decoration-ink/30 underline-offset-4 hover:decoration-ink"
-          >
-            Log in
-          </Link>
-          <Link
-            href="/signup"
+            href="/auth"
             className="rounded-full bg-accent px-5 py-2 font-medium text-ink hover:bg-accent/80"
           >
-            Get Started
+            Sign in
           </Link>
         </div>
       )}
