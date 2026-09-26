@@ -28,17 +28,6 @@ export async function POST(request: Request) {
   }
   const { destinationId, dateRangeStart, dateRangeEnd, forceRegenerate } = parsed.data;
 
-  const rateLimit = await checkAndIncrementRateLimit(user.id);
-  if (!rateLimit.allowed) {
-    return NextResponse.json(
-      {
-        error: "rate_limit_exceeded",
-        message: `You've reached today's limit of ${rateLimit.limit} briefing generations. Try again tomorrow.`,
-      },
-      { status: 429 },
-    );
-  }
-
   const supabase = createServiceClient();
 
   const { data: destination, error: destinationError } = await supabase
@@ -51,8 +40,42 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "destination_not_found" }, { status: 404 });
   }
 
-  // Cache lookup (skip if forceRegenerate) is not wired up yet — every
-  // call runs the full pipeline. Rate limiting above bounds the damage.
+  if (!forceRegenerate) {
+    const { data: cachedBriefing } = await supabase
+      .from("briefings")
+      .select("id, risk_label, content, generated_at, expires_at")
+      .eq("destination_id", destination.id)
+      .eq("date_range_start", dateRangeStart)
+      .eq("date_range_end", dateRangeEnd)
+      .gt("expires_at", new Date().toISOString())
+      .order("generated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (cachedBriefing) {
+      return NextResponse.json({
+        briefingId: cachedBriefing.id,
+        riskLabel: cachedBriefing.risk_label,
+        content: cachedBriefing.content,
+        generatedAt: cachedBriefing.generated_at,
+        cached: true,
+      });
+    }
+  }
+
+  // Cache misses (and forced regenerations) count against the daily quota;
+  // cache hits above don't, since they cost no LLM/API calls.
+  const rateLimit = await checkAndIncrementRateLimit(user.id);
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      {
+        error: "rate_limit_exceeded",
+        message: `You've reached today's limit of ${rateLimit.limit} briefing generations. Try again tomorrow.`,
+      },
+      { status: 429 },
+    );
+  }
+
   const { data: agentRun, error: agentRunError } = await supabase
     .from("agent_runs")
     .insert({
