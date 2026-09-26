@@ -130,11 +130,18 @@ export function BriefingForm({ destinations }: { destinations: Destination[] }) 
       {result && (
         <div className="flex flex-col gap-4 rounded-2xl border border-ink/20 p-6">
           <div className="flex items-center justify-between">
-            <span
-              className={`rounded-full px-3 py-1 text-xs font-medium ${RISK_COLORS[result.riskLabel]}`}
-            >
-              Risk: {result.riskLabel}
-            </span>
+            <div className="flex items-center gap-2">
+              <span
+                className={`rounded-full px-3 py-1 text-xs font-medium ${RISK_COLORS[result.riskLabel]}`}
+              >
+                Risk: {result.riskLabel}
+              </span>
+              {result.cached && (
+                <span className="rounded-full bg-ink/10 px-3 py-1 text-xs font-medium text-ink/60">
+                  Cached
+                </span>
+              )}
+            </div>
             <button
               onClick={() => generate(true)}
               disabled={loading}
