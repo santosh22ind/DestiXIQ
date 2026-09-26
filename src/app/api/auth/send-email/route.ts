@@ -35,9 +35,14 @@ export async function POST(request: Request) {
     "webhook-signature": request.headers.get("webhook-signature") ?? "",
   };
 
+  // Supabase issues this secret as "v1,whsec_<base64>" — the standardwebhooks
+  // library only strips its own "whsec_" prefix, not the leading "v1,", so
+  // that has to come off first or every signature verification fails.
+  const normalizedSecret = hookSecret.replace(/^v1,/, "");
+
   let event: SendEmailPayload;
   try {
-    const wh = new Webhook(hookSecret);
+    const wh = new Webhook(normalizedSecret);
     event = wh.verify(payload, headers) as SendEmailPayload;
   } catch {
     return NextResponse.json({ error: "invalid_signature" }, { status: 401 });
