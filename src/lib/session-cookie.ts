@@ -15,6 +15,19 @@ function getSecret(): string {
   return secret;
 }
 
+// Deliberately avoids Node's Buffer — Edge runtime only partially polyfills
+// it, and "base64url" encoding support isn't guaranteed there. btoa + a
+// manual URL-safe swap works identically in both the Node runtime (Server
+// Actions) and proxy.ts's Edge runtime.
+function toBase64Url(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer);
+  let binary = "";
+  for (const byte of bytes) {
+    binary += String.fromCharCode(byte);
+  }
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
 async function hmac(payload: string, secret: string): Promise<string> {
   const key = await crypto.subtle.importKey(
     "raw",
@@ -24,7 +37,7 @@ async function hmac(payload: string, secret: string): Promise<string> {
     ["sign"],
   );
   const sigBuffer = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(payload));
-  return Buffer.from(sigBuffer).toString("base64url");
+  return toBase64Url(sigBuffer);
 }
 
 export async function createSessionCookieValue(userId: string): Promise<string> {
